@@ -1,34 +1,40 @@
+# utils/indicators.py
 import pandas as pd
 
-def sma(series, period):
+def sma(series: pd.Series, period: int) -> pd.Series:
     """
-    Простая скользящая средняя
-    :param series: pd.Series с ценами закрытия
+    Простая скользящая средняя.
+    :param series: pandas Series цен закрытия
     :param period: период SMA
-    :return: pd.Series с SMA
+    :return: pandas Series с SMA
     """
-    return series.rolling(period).mean()
+    return series.rolling(window=period).mean()
 
-def is_bullish_pinbar(open_, high, low, close):
+
+def is_bullish_pinbar(open_price, high, low, close) -> bool:
     """
-    Проверка на бычий PinBar
-    - маленькое тело
-    - длинная нижняя тень > 2 * тело
+    Проверка, является ли свеча Bullish PinBar
+    :return: True если свеча бычья PinBar
     """
-    body = abs(close - open_)
-    lower_wick = min(open_, close) - low
+    body = abs(close - open_price)
+    lower_wick = min(open_price, close) - low
+    upper_wick = high - max(open_price, close)
+
+    # Условия PinBar
+    if body == 0:
+        return False  # избегаем деления на ноль
+    return lower_wick / body > 2 and body < (high - low) * 0.3
+
+
+def is_bearish_pinbar(open_price, high, low, close) -> bool:
+    """
+    Проверка, является ли свеча Bearish PinBar
+    :return: True если свеча медвежья PinBar
+    """
+    body = abs(close - open_price)
+    lower_wick = min(open_price, close) - low
+    upper_wick = high - max(open_price, close)
+
     if body == 0:
         return False
-    return lower_wick / body > 2
-
-def is_bearish_pinbar(open_, high, low, close):
-    """
-    Проверка на медвежий PinBar
-    - маленькое тело
-    - длинная верхняя тень > 2 * тело
-    """
-    body = abs(close - open_)
-    upper_wick = high - max(open_, close)
-    if body == 0:
-        return False
-    return upper_wick / body > 2
+    return upper_wick / body > 2 and body < (high - low) * 0.3

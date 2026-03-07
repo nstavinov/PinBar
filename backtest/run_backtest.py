@@ -1,42 +1,47 @@
+# backtest/run_backtest.py
+import os
 import pandas as pd
 from strategies.pinbar_strategy import PinBarStrategy
-import config
-import os
+from config import data_folder, symbols_file, timeframe, debug  # <-- берем debug из config
 
-def load_data(symbol, timeframe, folder):
-    filename = f"{folder}/{symbol}_{timeframe}.csv"
-    if not os.path.exists(filename):
-        print(f"Файл с историей {filename} не найден!")
+def load_ohlcv(symbol_file: str) -> pd.DataFrame:
+    """
+    Загружает OHLCV для символа из trading_symbols.txt
+    Преобразует символы вида BTC/USDT -> BTCUSDT
+    Файлы должны называться <SYMBOL>_<TIMEFRAME>.csv
+    """
+    symbol = symbol_file.replace("/", "")
+    file_path = os.path.join(data_folder, f"{symbol}_{timeframe}.csv")
+
+    if not os.path.exists(file_path):
+        if debug:
+            print(f"Файл с историей {file_path} не найден!")
         return None
-    df = pd.read_csv(filename, parse_dates=['datetime'], index_col='datetime')
-    if 'symbol' not in df.columns:
-        df['symbol'] = symbol
+
+    df = pd.read_csv(file_path)
+    if debug:
+        print(f"Загружено {len(df)} свечей для {symbol_file} ({file_path})")
     return df
 
 def main():
-    # Чтение списка инструментов
-    with open(config.symbols_file, 'r') as f:
+    if not os.path.exists(symbols_file):
+        print(f"Файл {symbols_file} не найден!")
+        return
+
+    with open(symbols_file, "r") as f:
         symbols = [line.strip() for line in f if line.strip()]
 
-    all_signals = []
+    if debug:
+        print(f"Всего инструментов в {symbols_file}: {len(symbols)}")
 
-    for symbol in symbols:
-        df = load_data(symbol, config.timeframe, config.data_folder)
+    for symbol_file in symbols:
+        df = load_ohlcv(symbol_file)
         if df is None:
             continue
 
-        strategy = PinBarStrategy(df, config)
-        signals = strategy.run()
-        print(f"--- {symbol} --- {len(signals)} сигналов")
-        for s in signals:
-            print(s)
-        all_signals.extend(signals)
-
-    # Сохранение всех сигналов в CSV
-    if all_signals:
-        all_df = pd.DataFrame(all_signals)
-        all_df.to_csv(f"{config.data_folder}/all_signals.csv", index=False)
-        print(f"\nСигналы всех инструментов сохранены в {config.data_folder}/all_signals.csv")
+        # Запуск стратегии PinBar
+        strategy = PinBarStrategy(symbol_file, df)
+        strategy.run_backtest()
 
 if __name__ == "__main__":
     main()

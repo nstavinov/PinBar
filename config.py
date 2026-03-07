@@ -18,4 +18,5 @@ commission = 0.0004
 slippage = 0.0
 data_folder = "ohlcv_cache/"
 symbols_file = "trading_symbols.txt"
-data_start_date = "2026-01-01"
+data_start_date = "2024-01-01"
+debug = True  # True — включён debug, False — выключен
